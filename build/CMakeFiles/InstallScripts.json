@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/lars/sauce/Zune/xna-deploy/build/cmake_install.cmake",
-		"/home/lars/sauce/Zune/xna-deploy/build/lib/vendor/android-file-transfer-linux/cmake_install.cmake",
-		"/home/lars/sauce/Zune/xna-deploy/build/lib/vendor/android-file-transfer-linux/cli/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
