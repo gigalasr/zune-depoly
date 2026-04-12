@@ -12,6 +12,7 @@ struct ZuneDevice {
     using Ptr = ZuneDevice*;
 
     ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session, mtp::TrustedAppPtr& ta);
+    ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session);
     ~ZuneDevice();
 
     mtp::DevicePtr device;
@@ -24,5 +25,5 @@ extern "C" {
     auto CloseConnection(ZuneDevice::Ptr device) -> void;
 
     auto PollData(ZuneDevice::Ptr device, std::uint8_t* out_buffer, std::size_t size, std::size_t* out_bytesRead) -> Result;
-    auto SendData(ZuneDevice::Ptr device, std::uint8_t* buffer, std::size_t size) -> void;
+    auto SendData(ZuneDevice::Ptr device, std::uint8_t* buffer, std::size_t size) -> Result;
 }

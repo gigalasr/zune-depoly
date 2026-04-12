@@ -9,7 +9,11 @@ static internal partial class MTP
     internal static partial int OpenConnection(out IntPtr device);
 
     [LibraryImport("libzune-deploy-native.so")]
-    internal static partial int PollData(IntPtr device, [MarshalUsing(CountElementName = "size")] in byte[] buffer, int size, out int bytesRead);
+
+    internal static partial void CloseConnection(IntPtr device);
+
+    [LibraryImport("libzune-deploy-native.so")]
+    internal static partial int PollData(IntPtr device, [MarshalUsing(CountElementName = "size")] byte[] buffer, int size, out int bytesRead);
 
     [LibraryImport("libzune-deploy-native.so")]
     internal static partial int SendData(IntPtr device, [MarshalUsing(CountElementName = "size")] in byte[] buffer, int size);

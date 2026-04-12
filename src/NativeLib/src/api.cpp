@@ -14,7 +14,6 @@
 #include <mtpz/TrustedApp.h>
 #include <usb/Context.h>
 #include <ptp/Device.h>
-#include <iostream>
 #include <vector>
 
 std::string GetMtpzDataPath() {
@@ -24,6 +23,11 @@ std::string GetMtpzDataPath() {
 
 ZuneDevice::ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session, mtp::TrustedAppPtr& ta)
     : device(device), session(session), ta(ta) {}
+
+
+ZuneDevice::ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session)
+    : device(device), session(session), ta(nullptr) {}
+
 
 ZuneDevice::~ZuneDevice() {}
 
@@ -37,30 +41,33 @@ auto OpenConnection(ZuneDevice::Ptr* out_devicePtr) -> Result {
 
     auto session = device->OpenSession(1);
 
-    // Expected to fail
+    // Expected to fail when the session has not been authenticated yet
+    bool sessionAuthenticated = true;
     try {
         session->XnaOpenSession();
     } catch (...) {
-        std::cout << "Probe Failed (Success)" << std::endl;
+        sessionAuthenticated = false;
     }
 
-    auto ta = mtp::TrustedApp::Create(session, GetMtpzDataPath());
+    if (!sessionAuthenticated) {
+        auto ta = mtp::TrustedApp::Create(session, GetMtpzDataPath());
 
-    if(!ta) {
-        return Result::ErrorHandshakeFailed;
+        if(!ta) {
+            return Result::ErrorHandshakeFailed;
+        }
+
+        ta->Authenticate(true);
+
+        *out_devicePtr = new ZuneDevice(device, session, ta);
+    } else {
+        *out_devicePtr = new ZuneDevice(device, session);
     }
-
-    ta->Authenticate(true);
-
-    *out_devicePtr = new ZuneDevice(device, session, ta);
-
-    std::cout << "Connected to " << device->GetInfo().Manufacturer << " " << device->GetInfo().Model << " " << device->GetInfo().DeviceVersion << std::endl;
 
     return Result::Ok;
 }
 
 auto CloseConnection(ZuneDevice::Ptr device) -> void {
-    // TODO: Close XNA Session and MTP Session cleanly
+    device->session->XnaCloseSession();
     delete device;
 }
 
@@ -69,7 +76,7 @@ auto PollData(ZuneDevice::Ptr device, std::uint8_t* out_buffer, std::size_t size
     *out_bytesRead = result.size();
 
     if(result.empty()) {
-         return Result::Ok;
+        return Result::Ok;
     }
 
     if(size < result.size()) {
@@ -78,13 +85,11 @@ auto PollData(ZuneDevice::Ptr device, std::uint8_t* out_buffer, std::size_t size
 
     std::memcpy(out_buffer, result.data(), std::min(size, result.size()));
 
-    mtp::HexDump("", result, true);
-
     return Result::Ok;
 }
 
-auto SendData(ZuneDevice::Ptr device, std::uint8_t* buffer, std::size_t size) -> void {
+auto SendData(ZuneDevice::Ptr device, std::uint8_t* buffer, std::size_t size) -> Result {
     std::vector<std::uint8_t> data(buffer, buffer + size);
     auto response = device->session->XnaSendData(data);
-    std::cout << "Response len " << response.size() << std::endl;
+    return Result::Ok;
 }
