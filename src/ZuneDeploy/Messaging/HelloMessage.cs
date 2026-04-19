@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace ZuneDeploy;
+namespace ZuneDeploy.Messaging;
 
 /**
  * The first message that the host sends the Zune after the first message from the zune is recieved

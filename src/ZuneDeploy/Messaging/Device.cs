@@ -1,22 +1,19 @@
 
 
 using System.Collections.Concurrent;
-using System.IO.Pipelines;
-using System.Reflection.Metadata;
 using NativeGen;
-using ZuneDeploy.Native;
 
-namespace ZuneDeploy;
+namespace ZuneDeploy.Messaging;
 
 internal class Device {
+    private const int FRAME_SIZE = 1264;
+    private const int POLL_TIMEOUT = 200;
+
     private IntPtr _deviceHandle;
     private Thread _connectionThread;
     private BlockingCollection<byte[]> _recieveQueue; 
     private BlockingCollection<byte[]> _sendQueue;
     private volatile bool _conThreadRunning = true;
-
-    private const int FRAME_SIZE = 1264;
-    private const int POLL_TIMEOUT = 200;
 
     public static Result TryConnect(out Device? device)
     {
@@ -45,6 +42,7 @@ internal class Device {
 
     public void Close()
     {
+        // TODO: Implement the actual closing commands 
         Console.WriteLine("Closing Connection...");
         _conThreadRunning = false;
         _connectionThread.Join();
@@ -67,7 +65,7 @@ internal class Device {
         Console.WriteLine("Waiting for Handshake");
 
         var firstPacket = Read();
-        byte[] expected = { 88, 88, 0, 1 };
+        byte[] expected = { 88, 88, 0, 1 }; // XX..
         
         for(int i = 0; i < expected.Length; i++)
         {
@@ -84,7 +82,7 @@ internal class Device {
 
     private void PollAndSendData()
     {
-        byte[] buffer = new byte[1264];
+        byte[] buffer = new byte[FRAME_SIZE];
 
         while (_conThreadRunning)
         {

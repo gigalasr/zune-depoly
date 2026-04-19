@@ -1,7 +1,7 @@
-﻿using System.Runtime.InteropServices;
-using ZuneDeploy.Native;
+﻿using ZuneDeploy.Messaging;
 using NativeGen;
-namespace ZuneDeploy.Main;
+
+namespace ZuneDeploy.Core;
 
 class Program
 {
