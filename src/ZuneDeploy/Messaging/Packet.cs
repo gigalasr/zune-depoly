@@ -15,7 +15,7 @@ namespace ZuneDeploy.Messaging;
  * Message
  * [streamId][len_hi][len_low][payload]
  * 
- * Command
+ * Command (len includes type and args)
  * [0][len_hi][len_low][type][args]
  *
  * Terminator

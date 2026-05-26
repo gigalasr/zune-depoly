@@ -93,4 +93,8 @@ internal class Device {
         }
     }
 
+    private void DispatchCommandHandler() {
+
+    }
+
 }

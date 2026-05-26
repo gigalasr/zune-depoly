@@ -10,7 +10,7 @@ namespace ZuneDeploy.Messaging;
  * 4  -   5: Port (0 for Zune)
  * 6  -   7: Random Bytes
  * 8  -  11: Address (0.0.0.0 for Zune)
- * 12 -  77: Device Name (UTF-16LE)
+ * 12 -  77: Device Name (UTF-16BE)
  * 78 - 111: 0 Padding
  */
 internal static class HelloMessage {
@@ -26,7 +26,7 @@ internal static class HelloMessage {
         buffer[6] = 1;
         buffer[7] = 2;
 
-        var nameBytes = Encoding.Unicode.GetBytes(deviceName);
+        var nameBytes = Encoding.BigEndianUnicode.GetBytes(deviceName);
         nameBytes.CopyTo(buffer, 12);
 
         return buffer;

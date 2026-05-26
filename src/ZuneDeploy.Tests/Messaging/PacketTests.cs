@@ -171,8 +171,8 @@ public class PacketTests {
 
         Assert.Equal(expectedSequenceId, packet.SequenceId);
         Assert.Equal(2, packet.GetCommands().Count);
-        Assert.Equal(CommandType.AcceptRequest, packet.GetCommands()[0].Type);
-        Assert.Equal(CommandType.StreamClosed, packet.GetCommands()[1].Type);
+        Assert.Equal(CommandType.StreamOpened, packet.GetCommands()[0].Type);
+        Assert.Equal(CommandType.CloseStream, packet.GetCommands()[1].Type);
         Assert.Empty(packet.GetMessages());
     }
 
