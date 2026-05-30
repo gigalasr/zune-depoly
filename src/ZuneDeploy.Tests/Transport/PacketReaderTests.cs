@@ -6,9 +6,13 @@ public class PacketReaderTests {
     public static IEnumerable<object[]> GetParsingTestData() {
         // Packet with 2 Commands, no messages
         yield return new object[] {
-            TestUtil.CreatePacket([
-                0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x04, 0xa2,
-                0x02, 0x10, 0x00, 0x00, 0x00, 0x02, 0xc1, 0x01
+            TestUtil.FillPacket([
+                // Sequence Id
+                0x00, 0x00, 0x00, 0x06, 
+                // StreamOpenedCommand
+                0x00, 0x00, 0x04, 0xa2, 0x02, 0x10, 0x00, 
+                // StreamClosedCommand
+                0x00, 0x00, 0x02, 0xc1, 0x01
             ]),
             6,
             new ReceivableCommand[] {
@@ -20,10 +24,12 @@ public class PacketReaderTests {
 
         // Packet with XNAFTW ok response
         yield return new object[] {
-            TestUtil.CreatePacket([
-                0x00, 0x00, 0x00, 0x07, 0x02, 0x00, 0x0e, 0x58,
-                0x4e, 0x41, 0x46, 0x54, 0x57, 0x02, 0x00, 0x00,
-                0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            TestUtil.FillPacket([
+                // Sequence Id
+                0x00, 0x00, 0x00, 0x07, 
+                // Message
+                0x02, 0x00, 0x0e, 0x58, 0x4e, 0x41, 0x46, 0x54,
+                0x57, 0x02, 0x00, 0x00, 0x03, 0x02, 0x00, 0x00,
             ]),
             7,
             new ReceivableCommand[] {},
@@ -43,7 +49,7 @@ public class PacketReaderTests {
         Assert.Equal(expectedMessages.Length, actualMessages.Count);
         for (int i = 0; i < expectedMessages.Length; i++) {
             Assert.Equal(expectedMessages[i].StreamId, actualMessages[i].StreamId);
-            Assert.Equal(expectedMessages[i].Data, actualMessages[i].Data);
+            Assert.Equal(expectedMessages[i].Data.ToArray(), actualMessages[i].Data.ToArray());
         }
 
         // Check Commands were parsed correctly

@@ -12,8 +12,10 @@ internal class Message {
     }
 
     /// <summary>
-    /// The length of the message, including its header (1 byte streamId, 2 bytes length)
+    /// The remaining length of the message, including its header (1 byte streamId, 2 bytes length)
     /// Note: The header will be added by the <see cref="PacketWriter"/> when creating the packet containing the message
     /// </summary>
-    public long LengthIncludingHeader => Data.Length + 3;
+    public int RemainingLengthIncludingHeader => (int)(Data.Length - Data.Position + HeaderLength);
+
+    public const int HeaderLength = 3;
 }

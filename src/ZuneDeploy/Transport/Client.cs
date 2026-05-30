@@ -34,7 +34,7 @@ internal class Client {
     }
 
     public ServiceStream ConnectToService(string serviceId) {
-        ServiceStream stream = _streamCollection.OpenStream(serviceId);
+        ServiceStream stream = _streamCollection.OpenStream();
 
         // TODO: Actually open stream and wait for stuffs
 

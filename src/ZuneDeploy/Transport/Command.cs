@@ -98,7 +98,8 @@ internal abstract class SendableCommand : ICommand {
     /// The length of the message, including its header (1 byte streamId, 2 bytes length)
     /// Note: The header will be added by the <see cref="PacketWriter"/> when creating the packet containing the message
     /// </summary>
-    public int LengthIncludingHeader => RawBytes.Length + 3;
+    public int LengthIncludingHeader => RawBytes.Length + HeaderLength;
+    public const int HeaderLength = 3;
 }
 
 internal abstract class ReceivableCommand : ICommand { }

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using ZuneDeploy.Transport;
 
 namespace ZuneDeploy.Tests;
@@ -20,7 +21,7 @@ internal static class TestUtil {
         }
     }
 
-    public static byte[] CreatePacket(byte[] buffer) {
+    public static byte[] FillPacket(byte[] buffer) {
         if (buffer.Length > Packet.PACKET_LENGTH) {
             throw new ArgumentException("Provided buffer is too large");
         }
@@ -30,5 +31,4 @@ internal static class TestUtil {
 
         return packet;
     }
-
 }
