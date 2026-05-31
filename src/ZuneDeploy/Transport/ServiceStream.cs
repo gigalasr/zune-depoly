@@ -3,15 +3,6 @@ using System.Collections.Concurrent;
 
 namespace ZuneDeploy.Transport;
 
-
-internal enum ServiceStreamState {
-    Opening,
-    Open,
-    Closing,
-    Closed
-}
-
-
 /// <summary>
 /// Stream to send and recieve bytes from a service over a packet stream 
 /// </summary>
@@ -20,8 +11,6 @@ internal class ServiceStream : Stream {
     public override bool CanWrite => true;
     public override bool CanSeek => false;
 
-    // private ChannelReader<StreamPacket> _reader;
-    // private ChannelWriter<StreamPacket> _writer;
     private BlockingCollection<Message> _incomingPackets = new();
     private BlockingCollection<Message> _outgoingPackets = new();
 
@@ -29,12 +18,6 @@ internal class ServiceStream : Stream {
     private MemoryStream _writeBuffer = new();
 
     public byte StreamId { init; get; }
-
-    private int _state = (int)ServiceStreamState.Opening;
-    public ServiceStreamState State {
-        get => (ServiceStreamState)Interlocked.CompareExchange(ref _state, 0, 0);
-        set => Interlocked.Exchange(ref _state, (int)value);
-    }
 
     internal ServiceStream(byte streamId) {
         StreamId = streamId;

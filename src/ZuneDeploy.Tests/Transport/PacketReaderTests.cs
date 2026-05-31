@@ -42,8 +42,11 @@ public class PacketReaderTests {
     [Theory]
     [MemberData(nameof(GetParsingTestData))]
     internal void ParsePackets(byte[] rawPacketBytes, uint sequenceId, ReceivableCommand[] expectedCommands, Message[] expectedMessages) {
-        PacketReader reader = new PacketReader(sequenceId);
-        reader.FromDeviceBuffer(rawPacketBytes, out List<Message> actualMessages, out List<ReceivableCommand> actualCommands);
+        StreamCollection collection = new StreamCollection();
+        PacketReader reader = new PacketReader(collection, sequenceId);
+        reader.Deserialize(rawPacketBytes);
+        var actualMessages = reader.__GetMessages();
+        var actualCommands = reader.__GetCommands();
 
         // Check Messages were split correctly:
         Assert.Equal(expectedMessages.Length, actualMessages.Count);

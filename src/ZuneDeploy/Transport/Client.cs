@@ -14,9 +14,6 @@ internal class Client {
     private IntPtr _deviceHandle;
     private Thread _connectionThread;
     private volatile bool _conThreadRunning = true;
-    private BlockingCollection<byte[]> _recieveQueue;
-    private BlockingCollection<byte[]> _sendQueue;
-
     private StreamCollection _streamCollection;
     private PacketReader _packetReader;
     private PacketWriter _packetWriter;
@@ -33,28 +30,29 @@ internal class Client {
         return result;
     }
 
-    public ServiceStream ConnectToService(string serviceId) {
-        ServiceStream stream = _streamCollection.OpenStream();
+    private Client(IntPtr deviceHandle) {
+        _deviceHandle = deviceHandle;
 
-        // TODO: Actually open stream and wait for stuffs
+        _streamCollection = new StreamCollection();
+        _packetReader = new PacketReader(_streamCollection);
+        _packetWriter = new PacketWriter(_streamCollection);
 
-        return stream;
-    }
+        _packetReader.OnStreamClosed += OnStreamClosed;
+        _packetReader.OnStreamOpened += OnStreamOpened;
+        _packetReader.OnAckCancel += OnAckCancel;
+        _packetReader.OnRequestRefused += OnRequestRefused;
+        _packetReader.OnAckDisconnect += OnAckDisconnect;
+        _packetReader.OnHostRebooting += OnHostRebooting;
+        _packetReader.OnKeepAlive += OnKeepAlive;
+        _packetReader.OnDataProcessed += OnDataProcessed;
 
-    public void Send(SendableCommand command) {
+        ShakeHands();
 
-    }
+        _connectionThread = new Thread(PollAndSendData);
+        _connectionThread.Start();
 
-    public void Send(Message message) {
-
-    }
-
-    public void Send(byte[] data) {
-        _sendQueue.Add(data);
-    }
-
-    public byte[] Read() {
-        return _recieveQueue.Take();
+        Thread.Sleep(5000);
+        SendCommand(new OpenStreamCommand(1, "XnaChannelBroker"));
     }
 
     public void Close() {
@@ -65,61 +63,114 @@ internal class Client {
         MTP.CloseConnection(_deviceHandle);
     }
 
-    private Client(IntPtr deviceHandle) {
-        _deviceHandle = deviceHandle;
+    public ServiceStream ConnectToService(string serviceId) {
+        ServiceStream stream = _streamCollection.OpenStream();
 
-        _streamCollection = new StreamCollection();
-        _packetReader = new PacketReader();
-        _packetWriter = new PacketWriter(_streamCollection);
+        // TODO: Actually open stream and wait for stuffs
 
-        _recieveQueue = new BlockingCollection<byte[]>();
-        _sendQueue = new BlockingCollection<byte[]>();
+        return stream;
+    }
 
-        _connectionThread = new Thread(PollAndSendData);
-        _connectionThread.Start();
+    private void OnStreamClosed(object? sender, StreamClosedCommand info) {
+        Console.WriteLine($"[CMD] StreamClosed id={info.StreamId}");
+    }
 
-        ShakeHands();
+    private void OnStreamOpened(object? sender, StreamOpenedCommand info) {
+        Console.WriteLine($"[CMD] StreamOpened id={info.StreamId} buffer={info.BufferSize}");
+        _streamCollection.OnStreamOpened(info.StreamId, info.BufferSize);
+        SendCommand(new AckOpenCommand(info.StreamId));
+    }
+
+    private void OnAckCancel(object? sender, AckCancelCommand info) {
+        Console.WriteLine($"[CMD] AckCancel id={info.StreamId}");
+
+    }
+
+    private void OnRequestRefused(object? sender, RequestRefusedCommand info) {
+        Console.WriteLine($"[CMD] RequestRefused id={info.StreamId}");
+
+    }
+
+    private void OnAckDisconnect(object? sender, AckDisconnectCommand info) {
+        Console.WriteLine($"[CMD] AckDisconnect arg={info.Arg}");
+
+    }
+
+    private void OnHostRebooting(object? sender, RebootingCommand info) {
+        Console.WriteLine($"[CMD] HostRebooting arg={info.Flags}");
+
+    }
+
+    private void OnKeepAlive(object? sender, KeepAliveCommand info) {
+        Console.WriteLine($"[CMD] KeepAlive arg={info.Flags}");
+
+    }
+
+    private void OnDataProcessed(object? sender, DataProcessedCommand info) {
+        Console.WriteLine($"[CMD] DataProcessed id={info.StreamId} consumed={info.BytesConsumed}");
+        _streamCollection.OnDataProcessed(info.StreamId, info.BytesConsumed);
+    }
+
+    private void SendCommand(SendableCommand command) {
+        _packetWriter.SendCommand(command);
+    }
+
+    private bool SendRaw(byte[] data) {
+        var sendResult = (Result)MTP.SendData(_deviceHandle, data, data.Length);
+        if (sendResult != Result.Ok) {
+            Console.WriteLine("[ConThread] Non OK Result (send): " + sendResult);
+            return false;
+        }
+
+        return true;
+    }
+
+    private int ReadRaw(byte[] destination) {
+        var reuslt = (Result)MTP.PollData(_deviceHandle, destination, destination.Length, out int length);
+        if (reuslt != Result.Ok) {
+            Console.WriteLine("[ConThread] Non OK Result (recieve): " + reuslt);
+            return -1;
+        }
+
+        return length;
     }
 
     private void ShakeHands() {
-        // TODO: Move handshake into native lib
         Console.WriteLine("Waiting for Handshake");
 
-        var firstPacket = Read();
+        byte[] firstPacket = new byte[Packet.PACKET_LENGTH];
+        while (ReadRaw(firstPacket) <= 0) {
+            Thread.Sleep(1000);
+        }
         byte[] expected = { 88, 88, 0, 1 }; // XX..
 
         for (int i = 0; i < expected.Length; i++) {
             if (firstPacket[i] != expected[i]) {
+                HexDump.Dump(firstPacket);
                 throw new Exception("Handshake Failed");
             }
         }
 
-        Send(HelloMessage.CreateMessage());
+        SendRaw(HelloMessage.CreateMessage());
 
         Console.WriteLine("Connected");
     }
 
     private void PollAndSendData() {
-        byte[] buffer = new byte[Packet.PACKET_LENGTH];
+        byte[] incomingPacket = new byte[Packet.PACKET_LENGTH];
 
         while (_conThreadRunning) {
-            if (_sendQueue.TryTake(out byte[]? sendBuffer, POLL_TIMEOUT)) {
-                var sendResult = (Result)MTP.SendData(_deviceHandle, sendBuffer, sendBuffer.Length);
-                if (sendResult != Result.Ok) {
-                    Console.WriteLine("[ConThread] Non OK Result (send): " + sendResult);
-                    continue;
-                }
+            Thread.Sleep(500);
+            Console.WriteLine("POLL");
+            if (_packetWriter.GetNextPacket(out byte[]? outgoingPacket)) {
+                Console.WriteLine("Sending");
+                HexDump.Dump(outgoingPacket);
+                SendRaw(outgoingPacket!);
             }
 
-            var reuslt = (Result)MTP.PollData(_deviceHandle, buffer, buffer.Length, out int length);
-            if (reuslt != Result.Ok) {
-                Console.WriteLine("[ConThread] Non OK Result (recieve): " + reuslt);
-                continue;
-            }
-
-            if (length != 0) {
-                _recieveQueue.Add((byte[])buffer.Clone());
-                _packetReader.FromDeviceBuffer(buffer, out List<Message> messages, out List<ReceivableCommand> commands);
+            if (ReadRaw(incomingPacket) > 0) {
+                Console.WriteLine("Recieved");
+                _packetReader.ParseAndDispatch(incomingPacket);
             }
         }
     }

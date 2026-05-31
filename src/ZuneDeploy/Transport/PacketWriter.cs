@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -7,6 +8,8 @@ namespace ZuneDeploy.Transport;
 
 internal class PacketWriter {
     private StreamCollection _streamCollection;
+
+    private BlockingCollection<SendableCommand> _commandsToSend = new();
 
     private Queue<SendableCommand> _pendingCommands = new();
     private List<Message> _pendingMessages = new();
@@ -19,11 +22,14 @@ internal class PacketWriter {
     }
 
     public void SendCommand(SendableCommand command) {
-        _pendingCommands.Enqueue(command);
+        _commandsToSend.Add(command);
     }
 
     public bool GetNextPacket(out byte[]? packet) {
         _streamCollection.CollectMessagesFromStreams(_pendingMessages);
+        while (_commandsToSend.TryTake(out SendableCommand? cmd)) {
+            _pendingCommands.Enqueue(cmd);
+        }
 
         // Only generate a packet if we have actually something to send
         bool hasWork = _pendingCommands.Count > 0;

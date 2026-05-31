@@ -1,10 +1,9 @@
-using System.Security.Cryptography.X509Certificates;
-
 namespace ZuneDeploy.Transport;
 
 internal record StreamInformation {
     public required ServiceStream Stream { init; get; }
     public required ushort HostBufferSize { get; set; }
+    public required ServiceStreamState State { get; set; }
 }
 
 internal class StreamCollection() {
@@ -15,12 +14,11 @@ internal class StreamCollection() {
     public ServiceStream OpenStream() {
         byte streamId = GetNextStreamId();
 
-        ServiceStream stream = new ServiceStream(streamId) {
-            State = ServiceStreamState.Opening
-        };
+        ServiceStream stream = new ServiceStream(streamId);
         _streams.Add(streamId, new StreamInformation {
             Stream = stream,
-            HostBufferSize = 0
+            HostBufferSize = 0,
+            State = ServiceStreamState.Opening
         });
 
         return stream;
@@ -28,7 +26,7 @@ internal class StreamCollection() {
 
     public void CloseStream(byte streamId) {
         if (_streams.TryGetValue(streamId, out StreamInformation? info)) {
-            info.Stream.State = ServiceStreamState.Closing;
+            info.State = ServiceStreamState.Closing;
         } else {
             throw new Exception($"Tried to access stream {streamId}, but that id is not known");
         }
@@ -36,7 +34,7 @@ internal class StreamCollection() {
 
     public void OnStreamClosed(byte streamId) {
         if (_streams.TryGetValue(streamId, out StreamInformation? info)) {
-            info.Stream.State = ServiceStreamState.Closed;
+            info.State = ServiceStreamState.Closed;
             _streams.Remove(streamId);
             _freeStreamIds.Enqueue(streamId);
         } else {
@@ -46,7 +44,7 @@ internal class StreamCollection() {
 
     public void OnStreamOpened(byte streamId, ushort initalBufferSize) {
         if (_streams.TryGetValue(streamId, out StreamInformation? info)) {
-            info.Stream.State = ServiceStreamState.Open;
+            info.State = ServiceStreamState.Open;
             info.HostBufferSize = initalBufferSize;
         } else {
             throw new Exception($"Tried to access stream {streamId}, but that id is not known");
@@ -63,7 +61,7 @@ internal class StreamCollection() {
 
     public void DeliverMessageToStream(Message message) {
         if (_streams.TryGetValue(message.StreamId, out StreamInformation? info)) {
-            if (info.Stream.State != ServiceStreamState.Open) {
+            if (info.State != ServiceStreamState.Open) {
                 throw new Exception($"Cannot deliver message to closed stream: {info.Stream.StreamId}");
             }
 
@@ -95,7 +93,7 @@ internal class StreamCollection() {
 
     public void CollectMessagesFromStreams(List<Message> deliverTo) {
         foreach (StreamInformation info in _streams.Values) {
-            if (info.Stream.State != ServiceStreamState.Open) {
+            if (info.State != ServiceStreamState.Open) {
                 continue;
             }
 

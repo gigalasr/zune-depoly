@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace ZuneDeploy.Transport;
 
 /**
@@ -20,36 +22,62 @@ namespace ZuneDeploy.Transport;
  * [0][0][0]
  */
 internal class PacketReader {
-    private const int PACKET_LENGTH = 1264;
-    private const int PAYLOAD_LENGTH = 1236;
-    private const int SEQID_LENGTH = 4;
-    private const int PAYLOAD_END = SEQID_LENGTH + PAYLOAD_LENGTH - 1;
+    public event EventHandler<StreamClosedCommand>? OnStreamClosed;
+    public event EventHandler<StreamOpenedCommand>? OnStreamOpened;
+    public event EventHandler<AckCancelCommand>? OnAckCancel;
+    public event EventHandler<RequestRefusedCommand>? OnRequestRefused;
+    public event EventHandler<AckDisconnectCommand>? OnAckDisconnect;
+    public event EventHandler<RebootingCommand>? OnHostRebooting;
+    public event EventHandler<KeepAliveCommand>? OnKeepAlive;
+    public event EventHandler<DataProcessedCommand>? OnDataProcessed;
 
-    private uint _currentSequenceId;
 
-    public PacketReader(uint sequenceId = 0) {
-        _currentSequenceId = sequenceId;
+    private uint _sequenceId = 0;
+    private List<ReceivableCommand> _commands = new();
+    private List<Message> _messages = new();
+    private StreamCollection _streams;
+
+    public PacketReader(StreamCollection streams, uint sequenceId = 0) {
+        _streams = streams;
+        _sequenceId = sequenceId;
     }
 
 
-    // TODO: Add events for recievable commands again 
-    // TODO: Add ParseAndDeliver() Method that delivers messages and invokes command handlers
+    public void ParseAndDispatch(byte[] buffer) {
+        Deserialize(buffer);
 
-    public void FromDeviceBuffer(byte[] buffer, out List<Message> messages, out List<ReceivableCommand> commands) {
-        if (buffer.Length != PACKET_LENGTH) {
-            throw new ArgumentException($"A packet buffer must have a length of {PACKET_LENGTH}");
+        foreach (ReceivableCommand command in _commands) {
+            switch (command) {
+                case StreamClosedCommand cmd: OnStreamClosed?.Invoke(null, cmd); break;
+                case StreamOpenedCommand cmd: OnStreamOpened?.Invoke(null, cmd); break;
+                case AckCancelCommand cmd: OnAckCancel?.Invoke(null, cmd); break;
+                case RequestRefusedCommand cmd: OnRequestRefused?.Invoke(null, cmd); break;
+                case AckDisconnectCommand cmd: OnAckDisconnect?.Invoke(null, cmd); break;
+                case RebootingCommand cmd: OnHostRebooting?.Invoke(null, cmd); break;
+                case KeepAliveCommand cmd: OnKeepAlive?.Invoke(null, cmd); break;
+                case DataProcessedCommand cmd: OnDataProcessed?.Invoke(null, cmd); break;
+                default:
+                    throw new Exception($"Unknown Command {command}");
+            }
         }
 
-        Packet.ValidatePacket(buffer, _currentSequenceId);
-        Deserialize(buffer, out messages, out commands);
+        foreach (Message message in _messages) {
+            _streams.DeliverMessageToStream(message);
+        }
+
+        _commands.Clear();
+        _messages.Clear();
     }
 
-    private void Deserialize(byte[] buffer, out List<Message> messages, out List<ReceivableCommand> commands) {
-        messages = new List<Message>();
-        commands = new List<ReceivableCommand>();
+    internal void Deserialize(Span<byte> buffer) {
+        if (buffer.Length != Packet.PACKET_LENGTH) {
+            throw new ArgumentException($"A packet buffer must have a length of {Packet.PACKET_LENGTH}");
+        }
 
-        int offset = SEQID_LENGTH;
-        while (offset + 2 <= PAYLOAD_END) {
+        Packet.ValidatePacket(buffer, GetNextSequenceId());
+
+        int offset = Packet.SEQID_LENGTH;
+        while (offset + 2 <= Packet.PAYLOAD_END) {
             byte streamId = buffer[offset];
             int payloadLen = (buffer[offset + 1] << 8) | buffer[offset + 2];
 
@@ -58,15 +86,27 @@ internal class PacketReader {
                 break;
             }
 
-            var data = buffer.AsSpan(offset + 3, payloadLen);
+            var data = buffer.Slice(offset + 3, payloadLen);
 
             if (streamId == 0) {
-                commands.Add(CommandFactory.FromDeviceBuffer(data));
+                _commands.Add(CommandFactory.FromDeviceBuffer(data));
             } else {
-                messages.Add(new Message(streamId, data.ToArray()));
+                _messages.Add(new Message(streamId, data.ToArray()));
             }
 
             offset += payloadLen + 3;
         }
+    }
+
+    private uint GetNextSequenceId() {
+        return _sequenceId++;
+    }
+
+    internal ReadOnlyCollection<ReceivableCommand> __GetCommands() {
+        return this._commands.AsReadOnly();
+    }
+
+    internal ReadOnlyCollection<Message> __GetMessages() {
+        return this._messages.AsReadOnly();
     }
 }

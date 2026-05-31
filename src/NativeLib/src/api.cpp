@@ -40,6 +40,13 @@ auto OpenConnection(ZuneDevice::Ptr* out_devicePtr) -> Result {
 
     auto session = device->OpenSession(1);
 
+    auto devinfo = session->GetDeviceInfo();
+    std::cout << "Device: " << devinfo.Manufacturer << " " << devinfo.Model << std::endl;
+    std::cout << "Version: " << devinfo.DeviceVersion << std::endl;
+    std::cout << "Serial: " << devinfo.SerialNumber << std::endl;
+
+    session->GetDeviceProperty(mtp::DeviceProperty(0xD21A));
+
     // Expected to fail when the session has not been authenticated yet
     bool sessionAuthenticated = true;
     try {
@@ -61,8 +68,6 @@ auto OpenConnection(ZuneDevice::Ptr* out_devicePtr) -> Result {
     } else {
         *out_devicePtr = new ZuneDevice(device, session);
     }
-
-    // TODO: Handshake
 
     return Result::Ok;
 }
