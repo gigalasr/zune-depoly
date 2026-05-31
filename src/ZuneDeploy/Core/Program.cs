@@ -27,6 +27,12 @@ class Program {
 
         _client = device;
 
+        try {
+            device.ConnectToService("lolorofl");
+        } catch (Exception e) {
+            Console.WriteLine(e.Message);
+        }
+
         Channel chan = new Channel(device, Guid.Empty);
 
 

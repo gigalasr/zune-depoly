@@ -44,7 +44,9 @@ public class Client {
         var response = _workResponse.Take();
         switch (response) {
             case OpenStreamResponse r: return r.Stream;
-            default: throw new Exception("Failed to open stream");
+            case RequestFailedResponse:
+            default:
+                throw new Exception("Failed to open stream");
         }
     }
 
@@ -78,6 +80,7 @@ public class Client {
 
     private void OnStreamClosed(object? sender, StreamClosedCommand info) {
         Console.WriteLine($"StreamClosed id={info.StreamId}");
+        _streamCollection.OnStreamClosed(info.StreamId);
     }
 
     private void OnStreamOpened(object? sender, StreamOpenedCommand info) {
@@ -93,6 +96,7 @@ public class Client {
 
     private void OnRequestRefused(object? sender, RequestRefusedCommand info) {
         Console.WriteLine($"RequestRefused id={info.StreamId}");
+        _workResponse.Add(new RequestFailedResponse());
     }
 
     private void OnAckDisconnect(object? sender, AckDisconnectCommand info) {

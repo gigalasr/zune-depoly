@@ -15,3 +15,5 @@ internal record CloseStreamRequest : IWorkItemTx {
 internal record OpenStreamResponse : IWorkItemRx {
     public required ServiceStream Stream { init; get; }
 }
+
+internal record RequestFailedResponse : IWorkItemRx { }
