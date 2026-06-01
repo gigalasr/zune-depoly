@@ -28,16 +28,20 @@ public class Channel {
         _stream = client.ConnectToService(serviceId);
         var procs = Schema.ReadFromStream(_stream);
 
+        Console.WriteLine("Channel Schema");
         foreach (var proc in procs) {
             Console.Write(proc.Name);
             Console.Write("(");
-            foreach (var param in proc.Parameters) {
+            for (int i = 0; i < proc.Parameters.Count; i++) {
+                var param = proc.Parameters[i];
                 Console.Write(param.Type);
                 Console.Write(" ");
                 Console.Write(param.Name);
-                Console.Write(", ");
+                if (i != proc.Parameters.Count - 1) {
+                    Console.Write(", ");
+                }
             }
-            Console.Write(")");
+            Console.WriteLine(")");
         }
     }
 

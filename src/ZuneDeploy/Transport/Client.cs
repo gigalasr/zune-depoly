@@ -193,12 +193,12 @@ public class Client {
                 case CloseStreamRequest req:
                     if (_streamCollection.IsStreamOpen(req.StreamId)) {
                         _streamCollection.CloseStream(req.StreamId);
-                        _packetWriter.SendCommand(new CloseStreamCommand(req.StreamId));
                         _pendingRequests.Add(req.StreamId, req);
                         Console.WriteLine($"Requesting to close stream id={req.StreamId}");
                     } else {
+                        _packetWriter.SendCommand(new CloseStreamCommand(req.StreamId));
                         req.Response.SetResult();
-                        Console.WriteLine($"Requesting to close stream id={req.StreamId}, but it is already closed");
+                        Console.WriteLine($"Closeing stream id={req.StreamId}");
                     }
                     break;
                 default:
