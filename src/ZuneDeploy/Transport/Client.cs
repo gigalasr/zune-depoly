@@ -85,10 +85,13 @@ public class Client {
         Console.WriteLine($"StreamClosed id={info.StreamId}");
         _streamCollection.OnStreamClosed(info.StreamId);
 
-        var reqeust = _pendingRequests[info.StreamId];
-        if (reqeust is CloseStreamRequest && reqeust != null) {
-            ((CloseStreamRequest)reqeust).Response.SetResult();
-            _pendingRequests.Remove(info.StreamId);
+        // The Zune might close the stream before we request to close it 
+        // This happens in the case of the XnaChannelBroker for example
+        if (_pendingRequests.TryGetValue(info.StreamId, out IWorkItem? request)) {
+            if (request is CloseStreamRequest) {
+                ((CloseStreamRequest)request).Response.SetResult();
+                _pendingRequests.Remove(info.StreamId);
+            }
         }
     }
 
@@ -188,10 +191,15 @@ public class Client {
                     Console.WriteLine($"Requesting to open stream id={stream.StreamId} to service '{req.ServiceId}'");
                     break;
                 case CloseStreamRequest req:
-                    _streamCollection.CloseStream(req.StreamId);
-                    _packetWriter.SendCommand(new CloseStreamCommand(req.StreamId));
-                    _pendingRequests.Add(req.StreamId, req);
-                    Console.WriteLine($"Requesting to close stream id={req.StreamId}");
+                    if (_streamCollection.IsStreamOpen(req.StreamId)) {
+                        _streamCollection.CloseStream(req.StreamId);
+                        _packetWriter.SendCommand(new CloseStreamCommand(req.StreamId));
+                        _pendingRequests.Add(req.StreamId, req);
+                        Console.WriteLine($"Requesting to close stream id={req.StreamId}");
+                    } else {
+                        req.Response.SetResult();
+                        Console.WriteLine($"Requesting to close stream id={req.StreamId}, but it is already closed");
+                    }
                     break;
                 default:
                     throw new Exception("Unknown Request");

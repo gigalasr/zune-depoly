@@ -25,6 +25,14 @@ internal class StreamCollection() {
         return stream;
     }
 
+    public bool IsStreamOpen(byte streamId) {
+        if (_streams.TryGetValue(streamId, out StreamInformation? info)) {
+            return info.State == ServiceStreamState.Open;
+        }
+
+        return false;
+    }
+
     public void CloseStream(byte streamId) {
         if (_streams.TryGetValue(streamId, out StreamInformation? info)) {
             info.State = ServiceStreamState.Closing;

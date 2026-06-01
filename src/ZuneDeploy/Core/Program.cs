@@ -18,28 +18,7 @@ class Program {
 
         _client = device;
 
-        // try {
-        //     device.ConnectToService("lolorofl");
-        // } catch (Exception e) {
-        //     Console.WriteLine(e.Message);
-        // }
-
-        //Channel chan = new Channel(device, Guid.Empty);
-
-        using (ServiceStream stream = device.ConnectToService("XnaChannelBroker")) {
-            Thread.Sleep(5000);
-        }
-
-        Task.Run(() => {
-            Console.WriteLine("brokerB");
-            device.ConnectToService("XnaChannelBroker");
-            Console.WriteLine("broker");
-        });
-        Task.Run(() => {
-            Console.WriteLine("brokerC");
-            device.ConnectToService("XnaChan1");
-            Console.WriteLine("yuh");
-        });
+        Channel chan = new Channel(device, Channel.ApplicationDeploymentChannel);
 
         while (true) { }
     }
