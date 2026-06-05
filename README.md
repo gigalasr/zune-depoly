@@ -9,8 +9,8 @@ Main:
 - [x] Deploy Channel
 - [ ] CLI
 - [ ] Progress Callback for file uploads
-- [ ] Launch Channel
-- [ ] Runtime Deploy Channel 
+- [x] Launch Channel
+- [x] Runtime Deploy Channel 
 - [ ] Container Representation 
   - [ ] Folder Based
     - [ ] With CFG    
