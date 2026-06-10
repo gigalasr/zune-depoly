@@ -18,7 +18,7 @@ Main:
   - [ ] .ccgame 
 - [ ] Deploy Runtimes 
   - Deploy Kit always deploys the newest version of the runtime 
-  - [ ] Detect Zune Types 
+  - [x] Detect Zune Types 
     - Zune4 -> ZuneHD
     - Zune -> Other Zunes
 - [ ] Cleanly close connection
