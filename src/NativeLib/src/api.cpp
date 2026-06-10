@@ -1,4 +1,5 @@
 #include "api.hpp"
+#include "ByteArray.h"
 #include "log.h"
 
 #include <algorithm>
@@ -20,11 +21,11 @@ std::string GetMtpzDataPath() {
     return std::string(home ? home : ".") + "/.mtpz-data";
 }
 
-ZuneDevice::ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session, mtp::TrustedAppPtr& ta)
-    : device(device), session(session), ta(ta) {}
+ZuneDevice::ZuneDevice(const mtp::ByteArray& identification, mtp::DevicePtr& device, mtp::SessionPtr& session, mtp::TrustedAppPtr& ta)
+    : device(device), session(session), ta(ta), identification(identification) {}
 
-ZuneDevice::ZuneDevice(mtp::DevicePtr& device, mtp::SessionPtr& session)
-    : device(device), session(session), ta(nullptr) {}
+ZuneDevice::ZuneDevice(const mtp::ByteArray& identification, mtp::DevicePtr& device, mtp::SessionPtr& session)
+    : device(device), session(session), ta(nullptr), identification(identification) {}
 
 ZuneDevice::~ZuneDevice() {}
 
@@ -40,7 +41,7 @@ auto OpenConnection(ZuneDevice::Ptr* out_devicePtr) -> Result {
         auto session = device->OpenSession(1);
         auto devinfo = session->GetDeviceInfo();
 
-        session->GetDeviceProperty(mtp::DeviceProperty(0xD21A));
+        mtp::ByteArray identificaiton = session->GetDeviceProperty(mtp::DeviceProperty(0xD21A));
 
         // Expected to fail when the session has not been authenticated yet
         bool sessionAuthenticated = true;
@@ -59,9 +60,9 @@ auto OpenConnection(ZuneDevice::Ptr* out_devicePtr) -> Result {
 
             ta->Authenticate(true);
 
-            *out_devicePtr = new ZuneDevice(device, session, ta);
+            *out_devicePtr = new ZuneDevice(identificaiton, device, session, ta);
         } else {
-            *out_devicePtr = new ZuneDevice(device, session);
+            *out_devicePtr = new ZuneDevice(identificaiton, device, session);
         }
     } catch (...) {
         return Result::ErrorConnectionFailed;
@@ -105,4 +106,8 @@ auto SendData(ZuneDevice::Ptr device, std::uint8_t* buffer, std::size_t size) ->
     }
 
     return Result::Ok;
+}
+
+auto GetDeviceFamily(ZuneDevice::Ptr device) -> uint8_t {
+    return device->identification[3];
 }

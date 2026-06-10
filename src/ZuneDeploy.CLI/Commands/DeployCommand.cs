@@ -1,3 +1,4 @@
+using ZuneDeploy.Transport;
 using ZuneDeploy.XNA.Channels;
 using ZuneDeploy.XNA.Data;
 
@@ -15,7 +16,8 @@ internal static class DeployVerb {
             }
 
             using Zune zune = Spinner.SpinFor("Connecting to Zune",
-                () => new Zune()
+                () => new Zune(),
+                z => $"Connected to {z.DeviceFamily.AsWellKnownName()}"
             );
 
             // TODO: Make sure runtime container is available

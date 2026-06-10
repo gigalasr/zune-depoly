@@ -19,6 +19,8 @@ public class Client {
     private readonly BlockingCollection<IWorkItem> _requests = [];
     private readonly Dictionary<int, IWorkItem> _pendingRequests = [];
 
+    public DeviceFamily DeviceFamily { private set; get; }
+
     public void Close() {
         CloseInternal().GetAwaiter().GetResult();
         _conThreadRunning = false;
@@ -193,6 +195,7 @@ public class Client {
         }
 
         _deviceHandle = deviceHandle;
+        DeviceFamily = DeviceFamily.FromByte(MTP.GetDeviceFamily(_deviceHandle));
 
         byte[] firstPacket = new byte[Packet.PACKET_LENGTH];
         while (ReadRaw(firstPacket) <= 0) {

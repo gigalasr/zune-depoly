@@ -8,6 +8,8 @@ public class Zune : IDisposable {
     private readonly Client _client;
     private bool _isConnected = false;
 
+    public DeviceFamily DeviceFamily => _client.DeviceFamily;
+
     public Zune() {
         _client = new Client();
         _isConnected = true;

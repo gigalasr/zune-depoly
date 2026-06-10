@@ -16,4 +16,7 @@ static internal partial class MTP {
 
     [LibraryImport("libzune-deploy-native.so")]
     internal static partial int SendData(IntPtr device, [MarshalUsing(CountElementName = "size")] byte[] buffer, int size);
+
+    [LibraryImport("libzune-deploy-native.so")]
+    internal static partial byte GetDeviceFamily(IntPtr device);
 }

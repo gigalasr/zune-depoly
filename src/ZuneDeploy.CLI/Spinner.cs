@@ -26,14 +26,18 @@ public static class Spinner {
     private static CancellationTokenSource _cts = new();
 
     public static void SpinFor(string label, Action work, string? finalLabel = null) {
-        SpinFor<object?>(label, () => { work(); return null; }, finalLabel);
+        SpinFor<object?>(label, () => { work(); return null; }, finalLabel == null ? null : _ => finalLabel);
     }
 
-    public static T SpinFor<T>(string label, Func<T> work, string? finalLabel = null) {
+    public static T SpinFor<T>(string label, Func<T> work, Func<T, string>? finalLabel = null) {
         Start(label);
         T result = work();
         Trace.Assert(label.Contains("ing"));
-        Stop(finalLabel ?? label.Replace("ing", "ed"));
+        if (finalLabel == null) {
+            Stop(label.Replace("ing", "ed"));
+        } else {
+            Stop(finalLabel(result));
+        }
         return result;
     }
 
